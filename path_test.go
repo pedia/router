@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"runtime"
 	"testing"
@@ -87,14 +89,14 @@ func Test_cleanPath(t *testing.T) {
 }
 
 func TestGetOptionalPath(t *testing.T) {
-	handler := func(ctx *fasthttp.RequestCtx) {
-		ctx.SetStatusCode(fasthttp.StatusOK)
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
 	}
 
 	expected := []struct {
 		path    string
 		tsr     bool
-		handler fasthttp.RequestHandler
+		handler http.HandlerFunc
 	}{
 		{"/show/{name}", false, handler},
 		{"/show/{name}/", true, nil},
@@ -114,7 +116,7 @@ func TestGetOptionalPath(t *testing.T) {
 	r.GET("/show/{name}/{surname?}/at/{address?}/{id}/{phone?:.*}", handler)
 
 	for _, e := range expected {
-		ctx := new(fasthttp.RequestCtx)
+		ctx := httptest.NewRequest("GET", "/", nil)
 
 		h, tsr := r.Lookup("GET", e.path, ctx)
 

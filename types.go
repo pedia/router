@@ -1,11 +1,12 @@
 package router
 
 import (
-	"github.com/fasthttp/router/radix"
-	"github.com/valyala/fasthttp"
+	"net/http"
+
+	"github.com/pedia/router/radix"
 )
 
-// Router is a fasthttp.RequestHandler which can be used to dispatch requests to different
+// Router is a http.Handler which can be used to dispatch requests to different
 // handler functions via configurable routes
 type Router struct {
 	trees              []*radix.Tree
@@ -49,29 +50,29 @@ type Router struct {
 	// Custom OPTIONS handlers take priority over automatic replies.
 	HandleOPTIONS bool
 
-	// An optional fasthttp.RequestHandler that is called on automatic OPTIONS requests.
+	// An optional http.Handler that is called on automatic OPTIONS requests.
 	// The handler is only called if HandleOPTIONS is true and no OPTIONS
 	// handler for the specific path was set.
 	// The "Allowed" header is set before calling the handler.
-	GlobalOPTIONS fasthttp.RequestHandler
+	GlobalOPTIONS http.Handler
 
-	// Configurable fasthttp.RequestHandler which is called when no matching route is
+	// Configurable http.Handler which is called when no matching route is
 	// found. If it is not set, default NotFound is used.
-	NotFound fasthttp.RequestHandler
+	NotFound http.Handler
 
-	// Configurable fasthttp.RequestHandler which is called when a request
+	// Configurable http.Handler which is called when a request
 	// cannot be routed and HandleMethodNotAllowed is true.
-	// If it is not set, ctx.Error with fasthttp.StatusMethodNotAllowed is used.
+	// If it is not set, ctx.Error with http.StatusMethodNotAllowed is used.
 	// The "Allow" header with allowed request methods is set before the handler
 	// is called.
-	MethodNotAllowed fasthttp.RequestHandler
+	MethodNotAllowed http.Handler
 
 	// Function to handle panics recovered from http handlers.
 	// It should be used to generate a error page and return the http error code
 	// 500 (Internal Server Error).
 	// The handler can be used to keep your server from crashing because of
 	// unrecovered panics.
-	PanicHandler func(*fasthttp.RequestCtx, interface{})
+	PanicHandler func(http.ResponseWriter, *http.Request, interface{})
 
 	// Cached value of global (*) allowed methods
 	globalAllowed string

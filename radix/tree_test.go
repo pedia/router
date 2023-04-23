@@ -2,28 +2,29 @@ package radix
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
 	"github.com/savsgio/gotils/bytes"
 	"github.com/valyala/bytebufferpool"
-	"github.com/valyala/fasthttp"
 )
 
-func generateHandler() fasthttp.RequestHandler {
+func generateHandler() http.HandlerFunc {
 	hex := bytes.Rand(make([]byte, 10))
 
-	return func(ctx *fasthttp.RequestCtx) {
-		ctx.Write(hex)
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Write(hex)
 	}
 }
 
 func testHandlerAndParams(
-	t *testing.T, tree *Tree, reqPath string, handler fasthttp.RequestHandler, wantTSR bool, params map[string]interface{},
+	t *testing.T, tree *Tree, reqPath string, handler http.HandlerFunc, wantTSR bool, params map[string]interface{},
 ) {
-	for _, ctx := range []*fasthttp.RequestCtx{new(fasthttp.RequestCtx), nil} {
+	for _, r := range []*http.Request{httptest.NewRequest("GET", reqPath, nil), nil} {
 
-		h, tsr := tree.Get(reqPath, ctx)
+		h, tsr := tree.Get(reqPath, r)
 		if reflect.ValueOf(handler).Pointer() != reflect.ValueOf(h).Pointer() {
 			t.Errorf("Path '%s' handler == %p, want %p", reqPath, h, handler)
 		}
@@ -32,7 +33,7 @@ func testHandlerAndParams(
 			t.Errorf("Path '%s' tsr == %v, want %v", reqPath, tsr, wantTSR)
 		}
 
-		if ctx != nil {
+		if r != nil {
 			resultParams := make(map[string]interface{})
 			if params == nil {
 				params = make(map[string]interface{})
@@ -53,7 +54,7 @@ func Test_Tree(t *testing.T) {
 	type args struct {
 		path    string
 		reqPath string
-		handler fasthttp.RequestHandler
+		handler http.HandlerFunc
 	}
 
 	type want struct {
@@ -323,7 +324,7 @@ func Test_TreeMutable(t *testing.T) {
 }
 
 func Benchmark_Get(b *testing.B) {
-	handler := func(ctx *fasthttp.RequestCtx) {}
+	handler := func(http.ResponseWriter, *http.Request) {}
 
 	tree := New()
 
@@ -342,20 +343,20 @@ func Benchmark_Get(b *testing.B) {
 	tree.Add("/queries", handler)
 	tree.Add("/update", handler)
 
-	ctx := new(fasthttp.RequestCtx)
+	r := httptest.NewRequest("GET", "/", nil)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		tree.Get("/update", ctx)
+		tree.Get("/update", r)
 	}
 }
 
 func Benchmark_GetWithRegex(b *testing.B) {
-	handler := func(ctx *fasthttp.RequestCtx) {}
+	handler := func(http.ResponseWriter, *http.Request) {}
 
 	tree := New()
-	ctx := new(fasthttp.RequestCtx)
+	ctx := httptest.NewRequest("GET", "/", nil)
 
 	tree.Add("/api/{version:v[0-9]}/data", handler)
 
@@ -367,10 +368,10 @@ func Benchmark_GetWithRegex(b *testing.B) {
 }
 
 func Benchmark_GetWithParams(b *testing.B) {
-	handler := func(ctx *fasthttp.RequestCtx) {}
+	handler := func(http.ResponseWriter, *http.Request) {}
 
 	tree := New()
-	ctx := new(fasthttp.RequestCtx)
+	ctx := httptest.NewRequest("GET", "/", nil)
 
 	tree.Add("/api/{version}/data", handler)
 
@@ -382,7 +383,7 @@ func Benchmark_GetWithParams(b *testing.B) {
 }
 
 func Benchmark_FindCaseInsensitivePath(b *testing.B) {
-	handler := func(ctx *fasthttp.RequestCtx) {}
+	handler := func(http.ResponseWriter, *http.Request) {}
 
 	tree := New()
 	buf := bytebufferpool.Get()

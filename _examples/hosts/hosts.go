@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
-	"github.com/fasthttp/router"
+	"github.com/pedia/router"
 	"github.com/valyala/fasthttp"
 )
 
@@ -19,9 +20,9 @@ func Hello(ctx *fasthttp.RequestCtx) {
 }
 
 // HostSwitch is the host-handler map
-// We need an object that implements the fasthttp.RequestHandler interface.
-// We just use a map here, in which we map host names (with port) to fasthttp.RequestHandlers
-type HostSwitch map[string]fasthttp.RequestHandler
+// We need an object that implements the http.Handler interface.
+// We just use a map here, in which we map host names (with port) to http.Handlers
+type HostSwitch map[string]http.Handler
 
 // CheckHost Implement a CheckHost method on our new type
 func (hs HostSwitch) CheckHost(ctx *fasthttp.RequestCtx) {

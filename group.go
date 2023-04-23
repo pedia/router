@@ -1,6 +1,8 @@
 package router
 
-import "github.com/valyala/fasthttp"
+import (
+	"net/http"
+)
 
 // Group returns a new group.
 // Path auto-correction, including trailing slashes, is enabled by default.
@@ -14,64 +16,64 @@ func (g *Group) Group(path string) *Group {
 	return g.router.Group(g.prefix + path)
 }
 
-// GET is a shortcut for group.Handle(fasthttp.MethodGet, path, handler)
-func (g *Group) GET(path string, handler fasthttp.RequestHandler) {
+// GET is a shortcut for group.Handle(http.MethodGet, path, handler)
+func (g *Group) GET(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.GET(g.prefix+path, handler)
 }
 
-// HEAD is a shortcut for group.Handle(fasthttp.MethodHead, path, handler)
-func (g *Group) HEAD(path string, handler fasthttp.RequestHandler) {
+// HEAD is a shortcut for group.Handle(http.MethodHead, path, handler)
+func (g *Group) HEAD(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.HEAD(g.prefix+path, handler)
 }
 
-// POST is a shortcut for group.Handle(fasthttp.MethodPost, path, handler)
-func (g *Group) POST(path string, handler fasthttp.RequestHandler) {
+// POST is a shortcut for group.Handle(http.MethodPost, path, handler)
+func (g *Group) POST(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.POST(g.prefix+path, handler)
 }
 
-// PUT is a shortcut for group.Handle(fasthttp.MethodPut, path, handler)
-func (g *Group) PUT(path string, handler fasthttp.RequestHandler) {
+// PUT is a shortcut for group.Handle(http.MethodPut, path, handler)
+func (g *Group) PUT(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.PUT(g.prefix+path, handler)
 }
 
-// PATCH is a shortcut for group.Handle(fasthttp.MethodPatch, path, handler)
-func (g *Group) PATCH(path string, handler fasthttp.RequestHandler) {
+// PATCH is a shortcut for group.Handle(http.MethodPatch, path, handler)
+func (g *Group) PATCH(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.PATCH(g.prefix+path, handler)
 }
 
-// DELETE is a shortcut for group.Handle(fasthttp.MethodDelete, path, handler)
-func (g *Group) DELETE(path string, handler fasthttp.RequestHandler) {
+// DELETE is a shortcut for group.Handle(http.MethodDelete, path, handler)
+func (g *Group) DELETE(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.DELETE(g.prefix+path, handler)
 }
 
-// OPTIONS is a shortcut for group.Handle(fasthttp.MethodOptions, path, handler)
-func (g *Group) CONNECT(path string, handler fasthttp.RequestHandler) {
+// OPTIONS is a shortcut for group.Handle(http.MethodOptions, path, handler)
+func (g *Group) CONNECT(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.CONNECT(g.prefix+path, handler)
 }
 
-// OPTIONS is a shortcut for group.Handle(fasthttp.MethodOptions, path, handler)
-func (g *Group) OPTIONS(path string, handler fasthttp.RequestHandler) {
+// OPTIONS is a shortcut for group.Handle(http.MethodOptions, path, handler)
+func (g *Group) OPTIONS(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.OPTIONS(g.prefix+path, handler)
 }
 
-// OPTIONS is a shortcut for group.Handle(fasthttp.MethodOptions, path, handler)
-func (g *Group) TRACE(path string, handler fasthttp.RequestHandler) {
+// OPTIONS is a shortcut for group.Handle(http.MethodOptions, path, handler)
+func (g *Group) TRACE(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.TRACE(g.prefix+path, handler)
@@ -80,7 +82,7 @@ func (g *Group) TRACE(path string, handler fasthttp.RequestHandler) {
 // ANY is a shortcut for group.Handle(router.MethodWild, path, handler)
 //
 // WARNING: Use only for routes where the request method is not important
-func (g *Group) ANY(path string, handler fasthttp.RequestHandler) {
+func (g *Group) ANY(path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.ANY(g.prefix+path, handler)
@@ -111,7 +113,7 @@ func (g *Group) ServeFiles(path string, rootPath string) {
 // Use:
 //
 //	router.ServeFilesCustom("/src/{filepath:*}", *customFS)
-func (g *Group) ServeFilesCustom(path string, fs *fasthttp.FS) {
+func (g *Group) ServeFilesCustom(path string, fs http.FileSystem) {
 	validatePath(path)
 
 	g.router.ServeFilesCustom(g.prefix+path, fs)
@@ -125,7 +127,7 @@ func (g *Group) ServeFilesCustom(path string, fs *fasthttp.FS) {
 // This function is intended for bulk loading and to allow the usage of less
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
-func (g *Group) Handle(method, path string, handler fasthttp.RequestHandler) {
+func (g *Group) Handle(method, path string, handler http.HandlerFunc) {
 	validatePath(path)
 
 	g.router.Handle(method, g.prefix+path, handler)

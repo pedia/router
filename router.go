@@ -1,12 +1,13 @@
 package router
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
-	"github.com/fasthttp/router/radix"
+	"github.com/pedia/router/radix"
 	"github.com/savsgio/gotils/bytes"
-	"github.com/savsgio/gotils/strconv"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 )
@@ -39,7 +40,7 @@ func New() *Router {
 
 // Group returns a new group.
 // Path auto-correction, including trailing slashes, is enabled by default.
-func (r *Router) Group(path string) *Group {
+func (router *Router) Group(path string) *Group {
 	validatePath(path)
 
 	if path != "/" && strings.HasSuffix(path, "/") {
@@ -47,43 +48,44 @@ func (r *Router) Group(path string) *Group {
 	}
 
 	return &Group{
-		router: r,
+		router: router,
 		prefix: path,
 	}
 }
 
-func (r *Router) saveMatchedRoutePath(path string, handler fasthttp.RequestHandler) fasthttp.RequestHandler {
-	return func(ctx *fasthttp.RequestCtx) {
-		ctx.SetUserValue(MatchedRoutePathParam, path)
-		handler(ctx)
+func (router *Router) saveMatchedRoutePath(path string, handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// ctx.SetUserValue(MatchedRoutePathParam, path)
+		r.WithContext(context.WithValue(r.Context(), MatchedRoutePathParam, path))
+		handler(w, r)
 	}
 }
 
-func (r *Router) methodIndexOf(method string) int {
+func (router *Router) methodIndexOf(method string) int {
 	switch method {
-	case fasthttp.MethodGet:
+	case http.MethodGet:
 		return 0
-	case fasthttp.MethodHead:
+	case http.MethodHead:
 		return 1
-	case fasthttp.MethodPost:
+	case http.MethodPost:
 		return 2
-	case fasthttp.MethodPut:
+	case http.MethodPut:
 		return 3
-	case fasthttp.MethodPatch:
+	case http.MethodPatch:
 		return 4
-	case fasthttp.MethodDelete:
+	case http.MethodDelete:
 		return 5
-	case fasthttp.MethodConnect:
+	case http.MethodConnect:
 		return 6
-	case fasthttp.MethodOptions:
+	case http.MethodOptions:
 		return 7
-	case fasthttp.MethodTrace:
+	case http.MethodTrace:
 		return 8
 	case MethodWild:
 		return 9
 	}
 
-	if i, ok := r.customMethodsIndex[method]; ok {
+	if i, ok := router.customMethodsIndex[method]; ok {
 		return i
 	}
 
@@ -95,11 +97,11 @@ func (r *Router) methodIndexOf(method string) int {
 // # It's disabled by default
 //
 // WARNING: Use with care. It could generate unexpected behaviours
-func (r *Router) Mutable(v bool) {
-	r.treeMutable = v
+func (router *Router) Mutable(v bool) {
+	router.treeMutable = v
 
-	for i := range r.trees {
-		tree := r.trees[i]
+	for i := range router.trees {
+		tree := router.trees[i]
 
 		if tree != nil {
 			tree.Mutable = v
@@ -108,60 +110,60 @@ func (r *Router) Mutable(v bool) {
 }
 
 // List returns all registered routes grouped by method
-func (r *Router) List() map[string][]string {
-	return r.registeredPaths
+func (router *Router) List() map[string][]string {
+	return router.registeredPaths
 }
 
-// GET is a shortcut for router.Handle(fasthttp.MethodGet, path, handler)
-func (r *Router) GET(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodGet, path, handler)
+// GET is a shortcut for router.Handle(http.MethodGet, path, handler)
+func (router *Router) GET(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodGet, path, handler)
 }
 
-// HEAD is a shortcut for router.Handle(fasthttp.MethodHead, path, handler)
-func (r *Router) HEAD(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodHead, path, handler)
+// HEAD is a shortcut for router.Handle(http.MethodHead, path, handler)
+func (router *Router) HEAD(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodHead, path, handler)
 }
 
-// POST is a shortcut for router.Handle(fasthttp.MethodPost, path, handler)
-func (r *Router) POST(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodPost, path, handler)
+// POST is a shortcut for router.Handle(http.MethodPost, path, handler)
+func (router *Router) POST(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodPost, path, handler)
 }
 
-// PUT is a shortcut for router.Handle(fasthttp.MethodPut, path, handler)
-func (r *Router) PUT(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodPut, path, handler)
+// PUT is a shortcut for router.Handle(http.MethodPut, path, handler)
+func (router *Router) PUT(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodPut, path, handler)
 }
 
-// PATCH is a shortcut for router.Handle(fasthttp.MethodPatch, path, handler)
-func (r *Router) PATCH(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodPatch, path, handler)
+// PATCH is a shortcut for router.Handle(http.MethodPatch, path, handler)
+func (router *Router) PATCH(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodPatch, path, handler)
 }
 
-// DELETE is a shortcut for router.Handle(fasthttp.MethodDelete, path, handler)
-func (r *Router) DELETE(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodDelete, path, handler)
+// DELETE is a shortcut for router.Handle(http.MethodDelete, path, handler)
+func (router *Router) DELETE(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodDelete, path, handler)
 }
 
-// CONNECT is a shortcut for router.Handle(fasthttp.MethodConnect, path, handler)
-func (r *Router) CONNECT(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodConnect, path, handler)
+// CONNECT is a shortcut for router.Handle(http.MethodConnect, path, handler)
+func (router *Router) CONNECT(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodConnect, path, handler)
 }
 
-// OPTIONS is a shortcut for router.Handle(fasthttp.MethodOptions, path, handler)
-func (r *Router) OPTIONS(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodOptions, path, handler)
+// OPTIONS is a shortcut for router.Handle(http.MethodOptions, path, handler)
+func (router *Router) OPTIONS(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodOptions, path, handler)
 }
 
-// TRACE is a shortcut for router.Handle(fasthttp.MethodTrace, path, handler)
-func (r *Router) TRACE(path string, handler fasthttp.RequestHandler) {
-	r.Handle(fasthttp.MethodTrace, path, handler)
+// TRACE is a shortcut for router.Handle(http.MethodTrace, path, handler)
+func (router *Router) TRACE(path string, handler http.HandlerFunc) {
+	router.Handle(http.MethodTrace, path, handler)
 }
 
 // ANY is a shortcut for router.Handle(router.MethodWild, path, handler)
 //
 // WARNING: Use only for routes where the request method is not important
-func (r *Router) ANY(path string, handler fasthttp.RequestHandler) {
-	r.Handle(MethodWild, path, handler)
+func (router *Router) ANY(path string, handler http.HandlerFunc) {
+	router.Handle(MethodWild, path, handler)
 }
 
 // ServeFiles serves files from the given file system root.
@@ -173,8 +175,8 @@ func (r *Router) ANY(path string, handler fasthttp.RequestHandler) {
 // Use:
 //
 //	router.ServeFiles("/src/{filepath:*}", "./")
-func (r *Router) ServeFiles(path string, rootPath string) {
-	r.ServeFilesCustom(path, &fasthttp.FS{
+func (router *Router) ServeFiles(path string, rootPath string) {
+	router.ServeFilesCustom(path, &http.FS{
 		Root:               rootPath,
 		IndexNames:         []string{"index.html"},
 		GenerateIndexPages: true,
@@ -192,7 +194,7 @@ func (r *Router) ServeFiles(path string, rootPath string) {
 // Use:
 //
 //	router.ServeFilesCustom("/src/{filepath:*}", *customFS)
-func (r *Router) ServeFilesCustom(path string, fs *fasthttp.FS) {
+func (router *Router) ServeFilesCustom(path string, fs http.FileSystem) {
 	suffix := "/{filepath:*}"
 
 	if !strings.HasSuffix(path, suffix) {
@@ -205,9 +207,9 @@ func (r *Router) ServeFilesCustom(path string, fs *fasthttp.FS) {
 	if fs.PathRewrite == nil && stripSlashes > 0 {
 		fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
 	}
-	fileHandler := fs.NewRequestHandler()
+	fileHandler := fs.Newhttp.HandlerFunc()
 
-	r.GET(path, fileHandler)
+	router.GET(path, fileHandler)
 }
 
 // Handle registers a new request handler with the given path and method.
@@ -218,7 +220,7 @@ func (r *Router) ServeFilesCustom(path string, fs *fasthttp.FS) {
 // This function is intended for bulk loading and to allow the usage of less
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
-func (r *Router) Handle(method, path string, handler fasthttp.RequestHandler) {
+func (router *Router) Handle(method, path string, handler http.HandlerFunc) {
 	switch {
 	case len(method) == 0:
 		panic("method must not be empty")
@@ -228,29 +230,29 @@ func (r *Router) Handle(method, path string, handler fasthttp.RequestHandler) {
 		validatePath(path)
 	}
 
-	r.registeredPaths[method] = append(r.registeredPaths[method], path)
+	router.registeredPaths[method] = append(router.registeredPaths[method], path)
 
-	methodIndex := r.methodIndexOf(method)
+	methodIndex := router.methodIndexOf(method)
 	if methodIndex == -1 {
 		tree := radix.New()
-		tree.Mutable = r.treeMutable
+		tree.Mutable = router.treeMutable
 
-		r.trees = append(r.trees, tree)
-		methodIndex = len(r.trees) - 1
-		r.customMethodsIndex[method] = methodIndex
+		router.trees = append(router.trees, tree)
+		methodIndex = len(router.trees) - 1
+		router.customMethodsIndex[method] = methodIndex
 	}
 
-	tree := r.trees[methodIndex]
+	tree := router.trees[methodIndex]
 	if tree == nil {
 		tree = radix.New()
-		tree.Mutable = r.treeMutable
+		tree.Mutable = router.treeMutable
 
-		r.trees[methodIndex] = tree
-		r.globalAllowed = r.allowed("*", "")
+		router.trees[methodIndex] = tree
+		router.globalAllowed = router.allowed("*", "")
 	}
 
-	if r.SaveMatchedRoutePath {
-		handler = r.saveMatchedRoutePath(path, handler)
+	if router.SaveMatchedRoutePath {
+		handler = router.saveMatchedRoutePath(path, handler)
 	}
 
 	optionalPaths := getOptionalPaths(path)
@@ -270,56 +272,56 @@ func (r *Router) Handle(method, path string, handler fasthttp.RequestHandler) {
 // If the path was found, it returns the handler function.
 // Otherwise the second return value indicates whether a redirection to
 // the same path with an extra / without the trailing slash should be performed.
-func (r *Router) Lookup(method, path string, ctx *fasthttp.RequestCtx) (fasthttp.RequestHandler, bool) {
-	methodIndex := r.methodIndexOf(method)
+func (router *Router) Lookup(method, path string, r *http.Request) (http.HandlerFunc, bool) {
+	methodIndex := router.methodIndexOf(method)
 	if methodIndex == -1 {
 		return nil, false
 	}
 
-	if tree := r.trees[methodIndex]; tree != nil {
-		handler, tsr := tree.Get(path, ctx)
+	if tree := router.trees[methodIndex]; tree != nil {
+		handler, tsr := tree.Get(path, r)
 		if handler != nil || tsr {
 			return handler, tsr
 		}
 	}
 
-	if tree := r.trees[r.methodIndexOf(MethodWild)]; tree != nil {
-		return tree.Get(path, ctx)
+	if tree := router.trees[router.methodIndexOf(MethodWild)]; tree != nil {
+		return tree.Get(path, r)
 	}
 
 	return nil, false
 }
 
-func (r *Router) recv(ctx *fasthttp.RequestCtx) {
+func (router *Router) recv(w http.ResponseWriter, r *http.Request) {
 	if rcv := recover(); rcv != nil {
-		r.PanicHandler(ctx, rcv)
+		router.PanicHandler(w, r, rcv)
 	}
 }
 
-func (r *Router) allowed(path, reqMethod string) (allow string) {
+func (router *Router) allowed(path, reqMethod string) (allow string) {
 	allowed := make([]string, 0, 9)
 
 	if path == "*" || path == "/*" { // server-wide{ // server-wide
 		// empty method is used for internal calls to refresh the cache
 		if reqMethod == "" {
-			for method := range r.registeredPaths {
-				if method == fasthttp.MethodOptions {
+			for method := range router.registeredPaths {
+				if method == http.MethodOptions {
 					continue
 				}
 				// Add request method to list of allowed methods
 				allowed = append(allowed, method)
 			}
 		} else {
-			return r.globalAllowed
+			return router.globalAllowed
 		}
 	} else { // specific path
-		for method := range r.registeredPaths {
+		for method := range router.registeredPaths {
 			// Skip the requested method - we already tried this one
-			if method == reqMethod || method == fasthttp.MethodOptions {
+			if method == reqMethod || method == http.MethodOptions {
 				continue
 			}
 
-			handle, _ := r.trees[r.methodIndexOf(method)].Get(path, nil)
+			handle, _ := router.trees[router.methodIndexOf(method)].Get(path, nil)
 			if handle != nil {
 				// Add request method to list of allowed methods
 				allowed = append(allowed, method)
@@ -329,7 +331,7 @@ func (r *Router) allowed(path, reqMethod string) (allow string) {
 
 	if len(allowed) > 0 {
 		// Add request method to list of allowed methods
-		allowed = append(allowed, fasthttp.MethodOptions)
+		allowed = append(allowed, http.MethodOptions)
 
 		// Sort allowed methods.
 		// sort.Strings(allowed) unfortunately causes unnecessary allocations
@@ -346,15 +348,15 @@ func (r *Router) allowed(path, reqMethod string) (allow string) {
 	return
 }
 
-func (r *Router) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, method, path string) bool {
+func (router *Router) tryRedirect(w http.ResponseWriter, r *http.Request, tree *radix.Tree, tsr bool, method, path string) bool {
 	// Moved Permanently, request with GET method
-	code := fasthttp.StatusMovedPermanently
-	if method != fasthttp.MethodGet {
+	code := http.StatusMovedPermanently
+	if method != http.MethodGet {
 		// Permanent Redirect, request with same method
-		code = fasthttp.StatusPermanentRedirect
+		code = http.StatusPermanentRedirect
 	}
 
-	if tsr && r.RedirectTrailingSlash {
+	if tsr && router.RedirectTrailingSlash {
 		uri := bytebufferpool.Get()
 
 		if len(path) > 1 && path[len(path)-1] == '/' {
@@ -364,25 +366,26 @@ func (r *Router) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr boo
 			uri.WriteByte('/')
 		}
 
-		if queryBuf := ctx.URI().QueryString(); len(queryBuf) > 0 {
+		if queryBuf := r.URL.QueryString(); len(queryBuf) > 0 {
 			uri.WriteByte(questionMark)
 			uri.Write(queryBuf)
 		}
 
-		ctx.Redirect(uri.String(), code)
+		http.Redirect(w, r, uri.String(), code)
+		// ctx.Redirect(uri.String(), code)
 		bytebufferpool.Put(uri)
 
 		return true
 	}
 
 	// Try to fix the request path
-	if r.RedirectFixedPath {
-		path2 := strconv.B2S(ctx.Request.URI().Path())
+	if router.RedirectFixedPath {
+		path2 := r.URL.RawPath
 
 		uri := bytebufferpool.Get()
 		found := tree.FindCaseInsensitivePath(
 			cleanPath(path2),
-			r.RedirectTrailingSlash,
+			router.RedirectTrailingSlash,
 			uri,
 		)
 
@@ -392,7 +395,8 @@ func (r *Router) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr boo
 				uri.Write(queryBuf)
 			}
 
-			ctx.Redirect(uri.String(), code)
+			// ctx.Redirect(uri.String(), code)
+			http.Redirect(w, r, uri.String(), code)
 			bytebufferpool.Put(uri)
 
 			return true
@@ -405,22 +409,22 @@ func (r *Router) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr boo
 }
 
 // Handler makes the router implement the http.Handler interface.
-func (r *Router) Handler(ctx *fasthttp.RequestCtx) {
-	if r.PanicHandler != nil {
-		defer r.recv(ctx)
+func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if router.PanicHandler != nil {
+		defer router.recv(w, r)
 	}
 
-	path := strconv.B2S(ctx.Request.URI().PathOriginal())
-	method := strconv.B2S(ctx.Request.Header.Method())
-	methodIndex := r.methodIndexOf(method)
+	path := r.URL.RawPath
+	method := r.Method
+	methodIndex := router.methodIndexOf(method)
 
 	if methodIndex > -1 {
-		if tree := r.trees[methodIndex]; tree != nil {
-			if handler, tsr := tree.Get(path, ctx); handler != nil {
-				handler(ctx)
+		if tree := router.trees[methodIndex]; tree != nil {
+			if handler, tsr := tree.Get(path, r); handler != nil {
+				handler.ServeHTTP(w, r)
 				return
-			} else if method != fasthttp.MethodConnect && path != "/" {
-				if ok := r.tryRedirect(ctx, tree, tsr, method, path); ok {
+			} else if method != http.MethodConnect && path != "/" {
+				if ok := router.tryRedirect(w, r, tree, tsr, method, path); ok {
 					return
 				}
 			}
@@ -428,46 +432,45 @@ func (r *Router) Handler(ctx *fasthttp.RequestCtx) {
 	}
 
 	// Try to search in the wild method tree
-	if tree := r.trees[r.methodIndexOf(MethodWild)]; tree != nil {
-		if handler, tsr := tree.Get(path, ctx); handler != nil {
-			handler(ctx)
+	if tree := router.trees[router.methodIndexOf(MethodWild)]; tree != nil {
+		if handler, tsr := tree.Get(path, r); handler != nil {
+			handler.ServeHTTP(w, r)
 			return
-		} else if method != fasthttp.MethodConnect && path != "/" {
-			if ok := r.tryRedirect(ctx, tree, tsr, method, path); ok {
+		} else if method != http.MethodConnect && path != "/" {
+			if ok := router.tryRedirect(w, r, tree, tsr, method, path); ok {
 				return
 			}
 		}
 	}
 
-	if r.HandleOPTIONS && method == fasthttp.MethodOptions {
+	if router.HandleOPTIONS && method == http.MethodOptions {
 		// Handle OPTIONS requests
 
-		if allow := r.allowed(path, fasthttp.MethodOptions); allow != "" {
-			ctx.Response.Header.Set("Allow", allow)
-			if r.GlobalOPTIONS != nil {
-				r.GlobalOPTIONS(ctx)
+		if allow := router.allowed(path, http.MethodOptions); allow != "" {
+			w.Header().Set("Allow", allow)
+			if router.GlobalOPTIONS != nil {
+				router.GlobalOPTIONS.ServeHTTP(w, r)
 			}
 			return
 		}
-	} else if r.HandleMethodNotAllowed {
+	} else if router.HandleMethodNotAllowed {
 		// Handle 405
 
-		if allow := r.allowed(path, method); allow != "" {
-			ctx.Response.Header.Set("Allow", allow)
-			if r.MethodNotAllowed != nil {
-				r.MethodNotAllowed(ctx)
+		if allow := router.allowed(path, method); allow != "" {
+			w.Header().Set("Allow", allow)
+			if router.MethodNotAllowed != nil {
+				router.MethodNotAllowed.ServeHTTP(w, r)
 			} else {
-				ctx.SetStatusCode(fasthttp.StatusMethodNotAllowed)
-				ctx.SetBodyString(fasthttp.StatusMessage(fasthttp.StatusMethodNotAllowed))
+				w.WriteHeader(http.StatusMethodNotAllowed)
 			}
 			return
 		}
 	}
 
 	// Handle 404
-	if r.NotFound != nil {
-		r.NotFound(ctx)
+	if router.NotFound != nil {
+		router.NotFound.ServeHTTP(w, r)
 	} else {
-		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusNotFound), fasthttp.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 	}
 }

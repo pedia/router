@@ -1,12 +1,12 @@
 package radix
 
 import (
+	"net/http"
 	"sort"
 	"strings"
 
 	gstrings "github.com/savsgio/gotils/strings"
 	"github.com/valyala/bytebufferpool"
-	"github.com/valyala/fasthttp"
 )
 
 func newNode(path string) *node {
@@ -104,7 +104,7 @@ func (n *node) findEndIndexAndValues(path string) (int, []string) {
 	return end, values
 }
 
-func (n *node) setHandler(handler fasthttp.RequestHandler, fullPath string) (*node, error) {
+func (n *node) setHandler(handler http.HandlerFunc, fullPath string) (*node, error) {
 	if n.handler != nil || n.tsr {
 		return n, newRadixError(errSetHandler, fullPath)
 	}
@@ -140,7 +140,7 @@ func (n *node) setHandler(handler fasthttp.RequestHandler, fullPath string) (*no
 	return n, nil
 }
 
-func (n *node) insert(path, fullPath string, handler fasthttp.RequestHandler) (*node, error) {
+func (n *node) insert(path, fullPath string, handler http.HandlerFunc) (*node, error) {
 	end := segmentEndIndex(path, true)
 	child := newNode(path)
 
@@ -225,7 +225,7 @@ func (n *node) insert(path, fullPath string, handler fasthttp.RequestHandler) (*
 }
 
 // add adds the handler to node for the given path
-func (n *node) add(path, fullPath string, handler fasthttp.RequestHandler) (*node, error) {
+func (n *node) add(path, fullPath string, handler http.HandlerFunc) (*node, error) {
 	if len(path) == 0 {
 		return n.setHandler(handler, fullPath)
 	}
@@ -279,7 +279,7 @@ func (n *node) add(path, fullPath string, handler fasthttp.RequestHandler) (*nod
 	return n.insert(path, fullPath, handler)
 }
 
-func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.RequestHandler, bool) {
+func (n *node) getFromChild(path string, r *http.Request) (http.HandlerFunc, bool) {
 	for _, child := range n.children {
 		switch child.nType {
 		case static:
@@ -295,7 +295,7 @@ func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.Req
 					continue
 				}
 
-				h, tsr := child.getFromChild(path[len(child.path):], ctx)
+				h, tsr := child.getFromChild(path[len(child.path):], r)
 				if h != nil || tsr {
 					return h, tsr
 				}
@@ -328,7 +328,7 @@ func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.Req
 			}
 
 			if len(path) > end {
-				h, tsr := child.getFromChild(path[end:], ctx)
+				h, tsr := child.getFromChild(path[end:], r)
 				if tsr {
 					return nil, tsr
 				} else if h != nil {

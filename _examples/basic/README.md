@@ -4,7 +4,7 @@ These examples show you the usage of `router`. You can easily build a web applic
 
 ### Basic example
 
-This is just a quick introduction, view the [GoDoc](https://pkg.go.dev/github.com/fasthttp/router) for details.
+This is just a quick introduction, view the [GoDoc](https://pkg.go.dev/github.com/pedia/router) for details.
 
 Let's start with a trivial example:
 
@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/fasthttp/router"
+	"github.com/pedia/router"
 	"github.com/valyala/fasthttp"
 )
 

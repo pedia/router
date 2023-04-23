@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/fasthttp/router"
+	"github.com/pedia/router"
 	"github.com/valyala/fasthttp"
 )
 

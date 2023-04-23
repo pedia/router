@@ -2,12 +2,13 @@ package radix
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/valyala/bytebufferpool"
-	"github.com/valyala/fasthttp"
 )
 
 type testRequests []struct {
@@ -25,8 +26,8 @@ type testRoute struct {
 // Used as a workaround since we can't compare functions or their addresses
 var fakeHandlerValue string
 
-func fakeHandler(val string) fasthttp.RequestHandler {
-	return func(ctx *fasthttp.RequestCtx) {
+func fakeHandler(val string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		fakeHandlerValue = val
 	}
 }
@@ -40,19 +41,13 @@ func catchPanic(testFunc func()) (recv interface{}) {
 	return
 }
 
-func acquireRequestCtx(path string) *fasthttp.RequestCtx {
-	ctx := new(fasthttp.RequestCtx)
-	req := new(fasthttp.Request)
-
-	req.SetRequestURI(path)
-	ctx.Init(req, nil, nil)
-
-	return ctx
+func acquireRequestCtx(path string) *http.Request {
+	return httptest.NewRequest("GET", path, nil)
 }
 
 func checkRequests(t *testing.T, tree *Tree, requests testRequests) {
 	for _, request := range requests {
-		ctx := acquireRequestCtx(request.path)
+		ctx := httptest.NewRequest("GET", request.path, nil)
 		handler, _ := tree.Get(request.path, ctx)
 
 		if handler == nil {
@@ -62,7 +57,7 @@ func checkRequests(t *testing.T, tree *Tree, requests testRequests) {
 		} else if request.nilHandler {
 			t.Errorf("handle mismatch for route '%s': Expected nil handle", request.path)
 		} else {
-			handler(ctx)
+			handler(httptest.NewRecorder(), ctx)
 			if fakeHandlerValue != request.route {
 				t.Errorf("handle mismatch for route '%s': Wrong handle (%s != %s)", request.path, fakeHandlerValue, request.route)
 			}

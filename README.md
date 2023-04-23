@@ -1,10 +1,10 @@
 # Router
 
-[![Test status](https://github.com/fasthttp/router/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/fasthttp/router/actions?workflow=test)
+[![Test status](https://github.com/pedia/router/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/pedia/router/actions?workflow=test)
 [![Coverage Status](https://coveralls.io/repos/fasthttp/router/badge.svg?branch=master&service=github)](https://coveralls.io/github/fasthttp/router?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/fasthttp/router)](https://goreportcard.com/report/github.com/fasthttp/router)
-[![GoDev](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/fasthttp/router)
-[![GitHub release](https://img.shields.io/github/release/fasthttp/router.svg)](https://github.com/fasthttp/router/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pedia/router)](https://goreportcard.com/report/github.com/pedia/router)
+[![GoDev](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/pedia/router)
+[![GitHub release](https://img.shields.io/github/release/fasthttp/router.svg)](https://github.com/pedia/router/releases)
 
 Router is a lightweight high performance HTTP request router (also called _multiplexer_ or just _mux_ for short) for [fasthttp](https://github.com/valyala/fasthttp).
 
@@ -38,7 +38,7 @@ great for SEO and improves the user experience.
 **Stop caring about trailing slashes:** Choose the URL style you like, the
 router automatically redirects the client if a trailing slash is missing or if
 there is one extra. Of course it only does so, if the new path has a handler.
-**If** you don't like it, you can [turn off this behavior](https://pkg.go.dev/github.com/fasthttp/router#Router.RedirectTrailingSlash).
+**If** you don't like it, you can [turn off this behavior](https://pkg.go.dev/github.com/pedia/router#Router.RedirectTrailingSlash).
 
 **Path auto-correction:** Besides detecting the missing or additional trailing
 slash at no extra cost, the router can also fix wrong cases and remove
@@ -56,7 +56,7 @@ garbage. In fact, the only heap allocations that are made, is by building the
 slice of the key-value pairs for path parameters. If the request path contains
 no parameters, not a single heap allocation is necessary.
 
-**No more server crashes:** You can set a [Panic handler](https://pkg.go.dev/github.com/fasthttp/router#Router.PanicHandler) to deal with panics
+**No more server crashes:** You can set a [Panic handler](https://pkg.go.dev/github.com/pedia/router#Router.PanicHandler) to deal with panics
 occurring during handling a HTTP request. The router then recovers and lets the
 PanicHandler log what happened and deliver a nice error page.
 
@@ -64,11 +64,11 @@ PanicHandler log what happened and deliver a nice error page.
 RESTful APIs. Moreover it has builtin native support for [OPTIONS requests](http://zacstewart.com/2012/04/14/http-options-method.html)
 and `405 Method Not Allowed` replies.
 
-Of course you can also set **custom [NotFound](https://pkg.go.dev/github.com/fasthttp/router#Router.NotFound) and [MethodNotAllowed](https://pkg.go.dev/github.com/fasthttp/router#Router.MethodNotAllowed) handlers** and [**serve static files**](https://pkg.go.dev/github.com/fasthttp/router#Router.ServeFiles).
+Of course you can also set **custom [NotFound](https://pkg.go.dev/github.com/pedia/router#Router.NotFound) and [MethodNotAllowed](https://pkg.go.dev/github.com/pedia/router#Router.MethodNotAllowed) handlers** and [**serve static files**](https://pkg.go.dev/github.com/pedia/router#Router.ServeFiles).
 
 ## Usage
 
-This is just a quick introduction, view the [GoDoc](https://pkg.go.dev/github.com/fasthttp/router) for details:
+This is just a quick introduction, view the [GoDoc](https://pkg.go.dev/github.com/pedia/router) for details:
 
 Let's start with a trivial example:
 
@@ -79,7 +79,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/fasthttp/router"
+	"github.com/pedia/router"
 	"github.com/valyala/fasthttp"
 )
 
@@ -190,13 +190,13 @@ For even better scalability, the child nodes on each tree level are ordered by p
 
 Because fasthttp doesn't provide http.Handler. See this [description](https://github.com/valyala/fasthttp#switching-from-nethttp-to-fasthttp).
 
-Fasthttp works with [RequestHandler](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler) functions instead of objects implementing Handler interface. So a Router provides a [Handler](https://pkg.go.dev/github.com/fasthttp/router#Router.Handler) interface to implement the fasthttp.ListenAndServe interface.
+Fasthttp works with [RequestHandler](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler) functions instead of objects implementing Handler interface. So a Router provides a [Handler](https://pkg.go.dev/github.com/pedia/router#Router.Handler) interface to implement the fasthttp.ListenAndServe interface.
 
 Just try it out for yourself, the usage of Router is very straightforward. The package is compact and minimalistic, but also probably one of the easiest routers to set up.
 
 ## Where can I find Middleware _X_?
 
-This package just provides a very efficient request router with a few extra features. The router is just a [`fasthttp.RequestHandler`](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler), you can chain any `fasthttp.RequestHandler` compatible middleware before the router. Or you could [just write your own](https://justinas.org/writing-http-middleware-in-go/), it's very easy!
+This package just provides a very efficient request router with a few extra features. The router is just a [`http.Handler`](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler), you can chain any `http.Handler` compatible middleware before the router. Or you could [just write your own](https://justinas.org/writing-http-middleware-in-go/), it's very easy!
 
 Have a look at these middleware examples:
 
@@ -205,9 +205,9 @@ Have a look at these middleware examples:
 
 ## Chaining with the NotFound handler
 
-**NOTE: It might be required to set [Router.HandleMethodNotAllowed](https://pkg.go.dev/github.com/fasthttp/router#Router.HandleMethodNotAllowed) to `false` to avoid problems.**
+**NOTE: It might be required to set [Router.HandleMethodNotAllowed](https://pkg.go.dev/github.com/pedia/router#Router.HandleMethodNotAllowed) to `false` to avoid problems.**
 
-You can use another [fasthttp.RequestHandler](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler), for example another router, to handle requests which could not be matched by this router by using the [Router.NotFound](https://pkg.go.dev/github.com/fasthttp/router#Router.NotFound) handler. This allows chaining.
+You can use another [http.Handler](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler), for example another router, to handle requests which could not be matched by this router by using the [Router.NotFound](https://pkg.go.dev/github.com/pedia/router#Router.NotFound) handler. This allows chaining.
 
 ### Static files
 

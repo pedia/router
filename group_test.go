@@ -2,6 +2,7 @@ package router
 
 import (
 	"bufio"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -12,7 +13,7 @@ import (
 type routerGrouper interface {
 	Group(string) *Group
 	ServeFiles(path string, rootPath string)
-	ServeFilesCustom(path string, fs *fasthttp.FS)
+	ServeFilesCustom(path string, fs http.FileSystem)
 }
 
 func assertGroup(t *testing.T, gs ...routerGrouper) {
@@ -49,7 +50,7 @@ func assertGroup(t *testing.T, gs ...routerGrouper) {
 		}
 
 		if err := catchPanic(func() {
-			g.ServeFilesCustom("", &fasthttp.FS{Root: "./"})
+			g.ServeFilesCustom("", http.Dir("./"))
 		}); err == nil {
 			t.Error("an error was expected with an empty path")
 		}
@@ -69,32 +70,32 @@ func TestGroup(t *testing.T) {
 
 	hit := false
 
-	r1.POST("/foo", func(ctx *fasthttp.RequestCtx) {
+	r1.POST("/foo", func(w http.ResponseWriter, r *http.Request) {
 		hit = true
-		ctx.SetStatusCode(fasthttp.StatusOK)
+		w.WriteHeader(http.StatusOK)
 	})
-	r2.POST("/bar", func(ctx *fasthttp.RequestCtx) {
+	r2.POST("/bar", func(w http.ResponseWriter, r *http.Request) {
 		hit = true
-		ctx.SetStatusCode(fasthttp.StatusOK)
+		w.WriteHeader(http.StatusOK)
 	})
-	r3.POST("/bar", func(ctx *fasthttp.RequestCtx) {
+	r3.POST("/bar", func(w http.ResponseWriter, r *http.Request) {
 		hit = true
-		ctx.SetStatusCode(fasthttp.StatusOK)
+		w.WriteHeader(http.StatusOK)
 	})
-	r4.POST("/bar", func(ctx *fasthttp.RequestCtx) {
+	r4.POST("/bar", func(w http.ResponseWriter, r *http.Request) {
 		hit = true
-		ctx.SetStatusCode(fasthttp.StatusOK)
+		w.WriteHeader(http.StatusOK)
 	})
-	r5.POST("/bar", func(ctx *fasthttp.RequestCtx) {
+	r5.POST("/bar", func(w http.ResponseWriter, r *http.Request) {
 		hit = true
-		ctx.SetStatusCode(fasthttp.StatusOK)
+		w.WriteHeader(http.StatusOK)
 	})
-	r6.POST("/bar", func(ctx *fasthttp.RequestCtx) {
+	r6.POST("/bar", func(w http.ResponseWriter, r *http.Request) {
 		hit = true
-		ctx.SetStatusCode(fasthttp.StatusOK)
+		w.WriteHeader(http.StatusOK)
 	})
 	r6.ServeFiles("/static/{filepath:*}", "./")
-	r6.ServeFilesCustom("/custom/static/{filepath:*}", &fasthttp.FS{Root: "./"})
+	r6.ServeFilesCustom("/custom/static/{filepath:*}", http.Dir("./"))
 
 	uris := []string{
 		"POST /foo HTTP/1.1\r\n\r\n",
@@ -117,14 +118,14 @@ func TestGroup(t *testing.T) {
 	for _, uri := range uris {
 		hit = false
 
-		assertWithTestServer(t, uri, r1.Handler, func(rw *readWriter) {
+		assertWithTestServer(t, uri, r1.ServeHTTP, func(rw *readWriter) {
 			br := bufio.NewReader(&rw.w)
 			var resp fasthttp.Response
 			if err := resp.Read(br); err != nil {
 				t.Fatalf("Unexpected error when reading response: %s", err)
 			}
-			if !(resp.Header.StatusCode() == fasthttp.StatusOK) {
-				t.Fatalf("Status code %d, want %d", resp.Header.StatusCode(), fasthttp.StatusOK)
+			if !(resp.Header.StatusCode() == http.StatusOK) {
+				t.Fatalf("Status code %d, want %d", resp.Header.StatusCode(), http.StatusOK)
 			}
 			if !strings.Contains(uri, "static") && !hit {
 				t.Fatalf("Regular routing failed with router chaining. %s", uri)
@@ -132,13 +133,13 @@ func TestGroup(t *testing.T) {
 		})
 	}
 
-	assertWithTestServer(t, "POST /qax HTTP/1.1\r\n\r\n", r1.Handler, func(rw *readWriter) {
+	assertWithTestServer(t, "POST /qax HTTP/1.1\r\n\r\n", r1.ServeHTTP, func(rw *readWriter) {
 		br := bufio.NewReader(&rw.w)
 		var resp fasthttp.Response
 		if err := resp.Read(br); err != nil {
 			t.Fatalf("Unexpected error when reading response: %s", err)
 		}
-		if !(resp.Header.StatusCode() == fasthttp.StatusNotFound) {
+		if !(resp.Header.StatusCode() == http.StatusNotFound) {
 			t.Errorf("NotFound behavior failed with router chaining.")
 			t.FailNow()
 		}
@@ -149,7 +150,7 @@ func TestGroup_shortcutsAndHandle(t *testing.T) {
 	r := New()
 	g := r.Group("/v1")
 
-	shortcuts := []func(path string, handler fasthttp.RequestHandler){
+	shortcuts := []func(path string, handler http.HandlerFunc){
 		g.GET,
 		g.HEAD,
 		g.POST,
@@ -163,13 +164,13 @@ func TestGroup_shortcutsAndHandle(t *testing.T) {
 	}
 
 	for _, fn := range shortcuts {
-		fn("/bar", func(_ *fasthttp.RequestCtx) {})
+		fn("/bar", func(w http.ResponseWriter, r *http.Request) {})
 
-		if err := catchPanic(func() { fn("buzz", func(_ *fasthttp.RequestCtx) {}) }); err == nil {
+		if err := catchPanic(func() { fn("buzz", func(w http.ResponseWriter, r *http.Request) {}) }); err == nil {
 			t.Error("an error was expected when a path does not begin with slash")
 		}
 
-		if err := catchPanic(func() { fn("", func(_ *fasthttp.RequestCtx) {}) }); err == nil {
+		if err := catchPanic(func() { fn("", func(w http.ResponseWriter, r *http.Request) {}) }); err == nil {
 			t.Error("an error was expected with an empty path")
 		}
 	}
@@ -185,13 +186,13 @@ func TestGroup_shortcutsAndHandle(t *testing.T) {
 	g2 := g.Group("/foo")
 
 	for _, method := range httpMethods {
-		g2.Handle(method, "/bar", func(_ *fasthttp.RequestCtx) {})
+		g2.Handle(method, "/bar", func(w http.ResponseWriter, r *http.Request) {})
 
-		if err := catchPanic(func() { g2.Handle(method, "buzz", func(_ *fasthttp.RequestCtx) {}) }); err == nil {
+		if err := catchPanic(func() { g2.Handle(method, "buzz", func(w http.ResponseWriter, r *http.Request) {}) }); err == nil {
 			t.Error("an error was expected when a path does not begin with slash")
 		}
 
-		if err := catchPanic(func() { g2.Handle(method, "", func(_ *fasthttp.RequestCtx) {}) }); err == nil {
+		if err := catchPanic(func() { g2.Handle(method, "", func(w http.ResponseWriter, r *http.Request) {}) }); err == nil {
 			t.Error("an error was expected with an empty path")
 		}
 

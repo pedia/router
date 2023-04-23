@@ -1,4 +1,4 @@
-module github.com/fasthttp/router
+module github.com/pedia/router
 
 go 1.17
 

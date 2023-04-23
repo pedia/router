@@ -1,7 +1,9 @@
 package radix
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -168,4 +170,18 @@ func findWildPath(path string, fullPath string) *wildPath {
 	}
 
 	return nil
+}
+
+type _paramCtxKey struct{}
+
+var paramCtxKey = _paramCtxKey{}
+
+func AddRequestValue(r *http.Request, key, val string) *http.Request {
+	m := r.Context().Value(paramCtxKey)
+	if m == nil {
+		m = map[interface{}]interface{}{}
+		r = r.WithContext(context.WithValue(r.Context(), paramCtxKey, m))
+	}
+	m.(map[interface{}]interface{})[key] = val
+	return r
 }

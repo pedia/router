@@ -1,9 +1,8 @@
 package radix
 
 import (
+	"net/http"
 	"regexp"
-
-	"github.com/valyala/fasthttp"
 )
 
 type nodeType uint8
@@ -11,7 +10,7 @@ type nodeType uint8
 type nodeWildcard struct {
 	path     string
 	paramKey string
-	handler  fasthttp.RequestHandler
+	handler  http.HandlerFunc
 }
 
 type node struct {
@@ -19,7 +18,7 @@ type node struct {
 
 	path         string
 	tsr          bool
-	handler      fasthttp.RequestHandler
+	handler      http.HandlerFunc
 	hasWildChild bool
 	children     []*node
 	wildcard     *nodeWildcard
