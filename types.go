@@ -54,18 +54,18 @@ type Router struct {
 	// The handler is only called if HandleOPTIONS is true and no OPTIONS
 	// handler for the specific path was set.
 	// The "Allowed" header is set before calling the handler.
-	GlobalOPTIONS http.Handler
+	GlobalOPTIONS http.HandlerFunc
 
 	// Configurable http.Handler which is called when no matching route is
 	// found. If it is not set, default NotFound is used.
-	NotFound http.Handler
+	NotFound http.HandlerFunc
 
 	// Configurable http.Handler which is called when a request
 	// cannot be routed and HandleMethodNotAllowed is true.
 	// If it is not set, ctx.Error with http.StatusMethodNotAllowed is used.
 	// The "Allow" header with allowed request methods is set before the handler
 	// is called.
-	MethodNotAllowed http.Handler
+	MethodNotAllowed http.HandlerFunc
 
 	// Function to handle panics recovered from http handlers.
 	// It should be used to generate a error page and return the http error code

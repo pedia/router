@@ -25,10 +25,15 @@ type testRoute struct {
 
 // Used as a workaround since we can't compare functions or their addresses
 var fakeHandlerValue string
+var fakeHandlerParams map[string]interface{}
 
 func fakeHandler(val string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fakeHandlerValue = val
+		fakeHandlerParams = map[string]interface{}{}
+		VisitUserValues(r, func(key string, value interface{}) {
+			fakeHandlerParams[key] = value
+		})
 	}
 }
 
@@ -39,10 +44,6 @@ func catchPanic(testFunc func()) (recv interface{}) {
 
 	testFunc()
 	return
-}
-
-func acquireRequestCtx(path string) *http.Request {
-	return httptest.NewRequest("GET", path, nil)
 }
 
 func checkRequests(t *testing.T, tree *Tree, requests testRequests) {
@@ -63,18 +64,14 @@ func checkRequests(t *testing.T, tree *Tree, requests testRequests) {
 			}
 		}
 
-		params := make(map[string]interface{})
 		if request.ps == nil {
 			request.ps = make(map[string]interface{})
 		}
 
-		ctx.VisitUserValues(func(key []byte, value interface{}) {
-			params[string(key)] = value
-		})
-
-		if !reflect.DeepEqual(params, request.ps) {
-			t.Errorf("Route %s - User values == %v, want %v", request.path, params, request.ps)
+		if !reflect.DeepEqual(fakeHandlerParams, request.ps) {
+			t.Errorf("Route %s - User values == %v, want %v", request.path, fakeHandlerParams, request.ps)
 		}
+		fakeHandlerParams = make(map[string]interface{})
 	}
 }
 

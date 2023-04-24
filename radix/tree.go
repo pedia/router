@@ -87,11 +87,17 @@ func (t *Tree) Get(path string, r *http.Request) (http.HandlerFunc, bool) {
 		case t.root.handler != nil:
 			return t.root.handler, false
 		case t.root.wildcard != nil:
+			f := t.root.wildcard.handler
 			if r != nil {
-				r.SetUserValue(t.root.wildcard.paramKey, "")
+				old := f
+				f = func(w http.ResponseWriter, r *http.Request) {
+					// r.SetUserValue(t.root.wildcard.paramKey, "")
+					r = AddRequestValue(r, t.root.wildcard.paramKey, "")
+					old(w, r)
+				}
 			}
 
-			return t.root.wildcard.handler, false
+			return f, false
 		}
 	}
 

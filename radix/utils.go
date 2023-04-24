@@ -179,9 +179,31 @@ var paramCtxKey = _paramCtxKey{}
 func AddRequestValue(r *http.Request, key, val string) *http.Request {
 	m := r.Context().Value(paramCtxKey)
 	if m == nil {
-		m = map[interface{}]interface{}{}
+		m = make(map[string]interface{})
 		r = r.WithContext(context.WithValue(r.Context(), paramCtxKey, m))
 	}
-	m.(map[interface{}]interface{})[key] = val
+	m.(map[string]interface{})[key] = val
 	return r
+}
+
+func VisitUserValues(r *http.Request, f func(key string, value interface{})) {
+	m := r.Context().Value(paramCtxKey)
+	if m != nil {
+		if tm, ok := m.(map[string]interface{}); ok {
+			for k, v := range tm {
+				f(k, v)
+			}
+		}
+	}
+}
+
+func UserValues(r *http.Request) map[string]interface{} {
+	if r != nil {
+		if m := r.Context().Value(paramCtxKey); m != nil {
+			if tm, ok := m.(map[string]interface{}); ok {
+				return tm
+			}
+		}
+	}
+	return nil
 }

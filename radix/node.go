@@ -306,11 +306,16 @@ func (n *node) getFromChild(path string, r *http.Request) (http.HandlerFunc, boo
 				case child.handler != nil:
 					return child.handler, false
 				case child.wildcard != nil:
-					if ctx != nil {
-						ctx.SetUserValue(child.wildcard.paramKey, "")
+					f := child.wildcard.handler
+					if r != nil {
+						old := f
+						f = func(w http.ResponseWriter, r *http.Request) {
+							// ctx.SetUserValue(child.wildcard.paramKey, "")
+							r = AddRequestValue(r, child.wildcard.paramKey, "")
+							old(w, r)
+						}
 					}
-
-					return child.wildcard.handler, false
+					return f, false
 				}
 
 				return nil, false
@@ -332,9 +337,16 @@ func (n *node) getFromChild(path string, r *http.Request) (http.HandlerFunc, boo
 				if tsr {
 					return nil, tsr
 				} else if h != nil {
-					if ctx != nil {
-						for i, key := range child.paramKeys {
-							ctx.SetUserValue(key, values[i])
+					if r != nil {
+						// for i, key := range child.paramKeys {
+						// 	ctx.SetUserValue(key, values[i])
+						// }
+						old := h
+						h = func(w http.ResponseWriter, r *http.Request) {
+							for i, key := range child.paramKeys {
+								r = AddRequestValue(r, key, values[i])
+							}
+							old(w, r)
 						}
 					}
 
@@ -342,19 +354,25 @@ func (n *node) getFromChild(path string, r *http.Request) (http.HandlerFunc, boo
 				}
 
 			} else if len(path) == end {
+				f := child.handler
 				switch {
 				case child.tsr:
 					return nil, true
 				case child.handler == nil:
 					// try another child
 					continue
-				case ctx != nil:
-					for i, key := range child.paramKeys {
-						ctx.SetUserValue(key, values[i])
+				case r != nil:
+					old := f
+					f = func(w http.ResponseWriter, r *http.Request) {
+						for i, key := range child.paramKeys {
+							// 	ctx.SetUserValue(key, values[i])
+							r = AddRequestValue(r, key, values[i])
+						}
+						old(w, r)
 					}
 				}
 
-				return child.handler, false
+				return f, false
 			}
 
 		default:
@@ -363,11 +381,17 @@ func (n *node) getFromChild(path string, r *http.Request) (http.HandlerFunc, boo
 	}
 
 	if n.wildcard != nil {
-		if ctx != nil {
-			ctx.SetUserValue(n.wildcard.paramKey, gstrings.Copy(path))
-		}
+		f := n.wildcard.handler
+		if r != nil {
+			old := f
+			f = func(w http.ResponseWriter, r *http.Request) {
+				// ctx.SetUserValue(n.wildcard.paramKey, gstrings.Copy(path))
+				r = AddRequestValue(r, n.wildcard.paramKey, gstrings.Copy(path))
+				old(w, r)
+			}
 
-		return n.wildcard.handler, false
+		}
+		return f, false
 	}
 
 	return nil, false

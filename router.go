@@ -1,7 +1,6 @@
 package router
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,7 +8,6 @@ import (
 	"github.com/pedia/router/radix"
 	"github.com/savsgio/gotils/bytes"
 	"github.com/valyala/bytebufferpool"
-	"github.com/valyala/fasthttp"
 )
 
 // MethodWild wild HTTP method
@@ -56,7 +54,7 @@ func (router *Router) Group(path string) *Group {
 func (router *Router) saveMatchedRoutePath(path string, handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// ctx.SetUserValue(MatchedRoutePathParam, path)
-		r.WithContext(context.WithValue(r.Context(), MatchedRoutePathParam, path))
+		r = radix.AddRequestValue(r, MatchedRoutePathParam, path)
 		handler(w, r)
 	}
 }
@@ -176,12 +174,13 @@ func (router *Router) ANY(path string, handler http.HandlerFunc) {
 //
 //	router.ServeFiles("/src/{filepath:*}", "./")
 func (router *Router) ServeFiles(path string, rootPath string) {
-	router.ServeFilesCustom(path, &http.FS{
-		Root:               rootPath,
-		IndexNames:         []string{"index.html"},
-		GenerateIndexPages: true,
-		AcceptByteRange:    true,
-	})
+	router.ServeFilesCustom(path, http.Dir(rootPath))
+	// {
+	// 	Root:               rootPath,
+	// 	IndexNames:         []string{"index.html"},
+	// 	GenerateIndexPages: true,
+	// 	AcceptByteRange:    true,
+	// })
 }
 
 // ServeFilesCustom serves files from the given file system settings.
@@ -201,15 +200,16 @@ func (router *Router) ServeFilesCustom(path string, fs http.FileSystem) {
 		panic("path must end with " + suffix + " in path '" + path + "'")
 	}
 
-	prefix := path[:len(path)-len(suffix)]
-	stripSlashes := strings.Count(prefix, "/")
+	// TODO:
+	// prefix := path[:len(path)-len(suffix)]
+	// stripSlashes := strings.Count(prefix, "/")
 
-	if fs.PathRewrite == nil && stripSlashes > 0 {
-		fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
-	}
-	fileHandler := fs.Newhttp.HandlerFunc()
+	// if fs.PathRewrite == nil && stripSlashes > 0 {
+	// 	fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
+	// }
+	fileServer := http.FileServer(fs)
 
-	router.GET(path, fileHandler)
+	router.GET(path, fileServer.ServeHTTP)
 }
 
 // Handle registers a new request handler with the given path and method.
@@ -366,9 +366,9 @@ func (router *Router) tryRedirect(w http.ResponseWriter, r *http.Request, tree *
 			uri.WriteByte('/')
 		}
 
-		if queryBuf := r.URL.QueryString(); len(queryBuf) > 0 {
+		if queryBuf := r.URL.RawQuery; len(queryBuf) > 0 {
 			uri.WriteByte(questionMark)
-			uri.Write(queryBuf)
+			uri.Write([]byte(queryBuf))
 		}
 
 		http.Redirect(w, r, uri.String(), code)
@@ -390,9 +390,9 @@ func (router *Router) tryRedirect(w http.ResponseWriter, r *http.Request, tree *
 		)
 
 		if found {
-			if queryBuf := ctx.URI().QueryString(); len(queryBuf) > 0 {
+			if queryBuf := r.URL.RawQuery; len(queryBuf) > 0 {
 				uri.WriteByte(questionMark)
-				uri.Write(queryBuf)
+				uri.Write([]byte(queryBuf))
 			}
 
 			// ctx.Redirect(uri.String(), code)
@@ -414,7 +414,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer router.recv(w, r)
 	}
 
-	path := r.URL.RawPath
+	path := r.URL.Path
 	method := r.Method
 	methodIndex := router.methodIndexOf(method)
 
