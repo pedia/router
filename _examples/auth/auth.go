@@ -4,19 +4,19 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	scrypt "github.com/elithrar/simple-scrypt"
 	"github.com/pedia/router"
-	"github.com/valyala/fasthttp"
 )
 
 // basicAuth returns the username and password provided in the request's
 // Authorization header, if the request uses HTTP Basic Authentication.
 // See RFC 2617, Section 2.
-func basicAuth(ctx *fasthttp.RequestCtx) (username, password string, ok bool) {
-	auth := ctx.Request.Header.Peek("Authorization")
-	if auth == nil {
+func basicAuth(r *http.Request) (username, password string, ok bool) {
+	auth := r.Header.Get("Authorization")
+	if auth == "" {
 		return
 	}
 	return parseBasicAuth(string(auth))
@@ -42,10 +42,10 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 }
 
 // BasicAuth is the basic auth handler
-func BasicAuth(h http.Handler, requiredUser string, requiredPasswordHash []byte) http.Handler {
-	return func(ctx *fasthttp.RequestCtx) {
+func BasicAuth(h http.HandlerFunc, requiredUser string, requiredPasswordHash []byte) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		// Get the Basic Authentication credentials
-		user, password, hasAuth := basicAuth(ctx)
+		user, password, hasAuth := basicAuth(r)
 
 		// WARNING:
 		// DO NOT use plain-text passwords for real apps.
@@ -67,7 +67,7 @@ func BasicAuth(h http.Handler, requiredUser string, requiredPasswordHash []byte)
 			} else {
 
 				// Delegate request to the given handle
-				h(ctx)
+				h(w, r)
 				return
 
 			}
@@ -75,19 +75,19 @@ func BasicAuth(h http.Handler, requiredUser string, requiredPasswordHash []byte)
 		}
 
 		// Request Basic Authentication otherwise
-		ctx.Error(http.StatusMessage(http.StatusUnauthorized), http.StatusUnauthorized)
-		ctx.Response.Header.Set("WWW-Authenticate", "Basic realm=Restricted")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
 	}
 }
 
 // Index is the index handler
-func Index(ctx *fasthttp.RequestCtx) {
-	fmt.Fprint(ctx, "Not protected!\n")
+func Index(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Not protected!\n")
 }
 
 // Protected is the Protected handler
-func Protected(ctx *fasthttp.RequestCtx) {
-	fmt.Fprint(ctx, "Protected!\n")
+func Protected(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Protected!\n")
 }
 
 func main() {
@@ -104,5 +104,8 @@ func main() {
 	r.GET("/", Index)
 	r.GET("/protected/", BasicAuth(Protected, user, hashedPassword))
 
-	log.Fatal(fasthttp.ListenAndServe(":8080", r.Handler))
+	s := http.Server{Addr: ":8080", Handler: r}
+	log.Fatal(s.ListenAndServe())
+
+	// curl -vs --user gordon:secret! http://127.0.0.1:8080/protected/
 }
