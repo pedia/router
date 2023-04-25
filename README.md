@@ -1,15 +1,16 @@
 # Router
 
 [![Test status](https://github.com/pedia/router/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/pedia/router/actions?workflow=test)
-[![Coverage Status](https://coveralls.io/repos/fasthttp/router/badge.svg?branch=master&service=github)](https://coveralls.io/github/fasthttp/router?branch=master)
+[![Coverage Status](https://coveralls.io/repos/pedia/router/badge.svg?branch=master&service=github)](https://coveralls.io/github/pedia/router?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pedia/router)](https://goreportcard.com/report/github.com/pedia/router)
 [![GoDev](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/pedia/router)
-[![GitHub release](https://img.shields.io/github/release/fasthttp/router.svg)](https://github.com/pedia/router/releases)
+[![GitHub release](https://img.shields.io/github/release/pedia/router.svg)](https://github.com/pedia/router/releases)
 
-Router is a lightweight high performance HTTP request router (also called _multiplexer_ or just _mux_ for short) for [fasthttp](https://github.com/valyala/fasthttp).
+Router is a lightweight high performance HTTP request router (also called _multiplexer_ or just _mux_ for short) for [go](https://pkg.go.dev/net/http).
 
 This router is optimized for high performance and a small memory footprint. It scales well even with very long paths and a large number of routes. A compressing dynamic trie (radix tree) structure is used for efficient matching.
 
+Based on [fasthttp/router](https://github.com/fasthttp/router).
 Based on [julienschmidt/httprouter](https://github.com/julienschmidt/httprouter).
 
 ## Features
@@ -78,17 +79,19 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/pedia/router"
-	"github.com/valyala/fasthttp"
 )
 
-func Index(ctx *fasthttp.RequestCtx) {
-	ctx.WriteString("Welcome!")
+// Index is the index handler
+func Index(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Welcome!\n")
 }
 
-func Hello(ctx *fasthttp.RequestCtx) {
-	fmt.Fprintf(ctx, "Hello, %s!\n", ctx.UserValue("name"))
+// Hello is the Hello handler
+func Hello(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "hello, %s!\n", router.UserValue(r, "name"))
 }
 
 func main() {
@@ -96,13 +99,13 @@ func main() {
 	r.GET("/", Index)
 	r.GET("/hello/{name}", Hello)
 
-	log.Fatal(fasthttp.ListenAndServe(":8080", r.Handler))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
 ```
 
 ### Named parameters
 
-As you can see, `{name}` is a _named parameter_. The values are accessible via `RequestCtx.UserValues`. You can get the value of a parameter by using the `ctx.UserValue("name")`.
+As you can see, `{name}` is a _named parameter_. The values are accessible via `router.UserValues`. You can get the value of a parameter by using the `router.UserValue("name")`.
 
 Named parameters only match a single path segment:
 
@@ -186,14 +189,6 @@ For even better scalability, the child nodes on each tree level are ordered by p
 └-
 ```
 
-## Why doesn't this work with `http.Handler`?
-
-Because fasthttp doesn't provide http.Handler. See this [description](https://github.com/valyala/fasthttp#switching-from-nethttp-to-fasthttp).
-
-Fasthttp works with [RequestHandler](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler) functions instead of objects implementing Handler interface. So a Router provides a [Handler](https://pkg.go.dev/github.com/pedia/router#Router.Handler) interface to implement the fasthttp.ListenAndServe interface.
-
-Just try it out for yourself, the usage of Router is very straightforward. The package is compact and minimalistic, but also probably one of the easiest routers to set up.
-
 ## Where can I find Middleware _X_?
 
 This package just provides a very efficient request router with a few extra features. The router is just a [`http.Handler`](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler), you can chain any `http.Handler` compatible middleware before the router. Or you could [just write your own](https://justinas.org/writing-http-middleware-in-go/), it's very easy!
@@ -209,7 +204,7 @@ Have a look at these middleware examples:
 
 You can use another [http.Handler](https://pkg.go.dev/github.com/valyala/fasthttp#RequestHandler), for example another router, to handle requests which could not be matched by this router by using the [Router.NotFound](https://pkg.go.dev/github.com/pedia/router#Router.NotFound) handler. This allows chaining.
 
-### Static files
+### Static files(Not Ready)
 
 The `NotFound` handler can for example be used to serve static files from the root path `/` (like an index.html file along with other assets):
 

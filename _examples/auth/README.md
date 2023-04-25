@@ -23,19 +23,19 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
+	scrypt "github.com/elithrar/simple-scrypt"
 	"github.com/pedia/router"
-	"github.com/elithrar/simple-scrypt"
-	"github.com/valyala/fasthttp"
 )
 
 // basicAuth returns the username and password provided in the request's
 // Authorization header, if the request uses HTTP Basic Authentication.
 // See RFC 2617, Section 2.
-func basicAuth(ctx *fasthttp.RequestCtx) (username, password string, ok bool) {
-	auth := ctx.Request.Header.Peek("Authorization")
-	if auth == nil {
+func basicAuth(r *http.Request) (username, password string, ok bool) {
+	auth := r.Header.Get("Authorization")
+	if auth == "" {
 		return
 	}
 	return parseBasicAuth(string(auth))
@@ -61,68 +61,71 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 }
 
 // BasicAuth is the basic auth handler
-func BasicAuth(h http.Handler, requiredUser string, requiredPasswordHash []byte) http.Handler {
-	return http.Handler(func(ctx *fasthttp.RequestCtx) {
+func BasicAuth(h http.HandlerFunc, requiredUser string, requiredPasswordHash []byte) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		// Get the Basic Authentication credentials
-		user, password, hasAuth := basicAuth(ctx)
-		
-		// WARNING: 
+		user, password, hasAuth := basicAuth(r)
+
+		// WARNING:
 		// DO NOT use plain-text passwords for real apps.
 		// A simple string comparison using == is vulnerable to a timing attack.
 		// Instead, use the hash comparison function found in your hash library.
 		// This example uses scrypt, which is a solid choice for secure hashing:
 		//   go get -u github.com/elithrar/simple-scrypt
-		
+
 		if hasAuth && user == requiredUser {
-						
+
 			// Uses the parameters from the existing derived key. Return an error if they don't match.
 			err := scrypt.CompareHashAndPassword(requiredPasswordHash, []byte(password))
 
-		    	if err != nil {
-				
+			if err != nil {
+
 				// log error and request Basic Authentication again below.
 				log.Fatal(err)
-				
-		    	} else {
-				
+
+			} else {
+
 				// Delegate request to the given handle
-				h(ctx)
+				h(w, r)
 				return
-				
-		    	}
-			
+
+			}
+
 		}
-		
+
 		// Request Basic Authentication otherwise
-		ctx.Error(http.StatusMessage(http.StatusUnauthorized), http.StatusUnauthorized)
-		ctx.Response.Header.Set("WWW-Authenticate", "Basic realm=Restricted")
-	})
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
+	}
 }
 
 // Index is the index handler
-func Index(ctx *fasthttp.RequestCtx) {
-	fmt.Fprint(ctx, "Not protected!\n")
+func Index(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Not protected!\n")
 }
 
 // Protected is the Protected handler
-func Protected(ctx *fasthttp.RequestCtx) {
-	fmt.Fprint(ctx, "Protected!\n")
+func Protected(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Protected!\n")
 }
 
 func main() {
 	user := "gordon"
 	pass := "secret!"
-	
+
 	// generate a hashed password from the password above:
 	hashedPassword, err := scrypt.GenerateFromPassword([]byte(pass), scrypt.DefaultParams)
-    	if err != nil {
-        	log.Fatal(err)
-    	}
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	r := router.New()
 	r.GET("/", Index)
 	r.GET("/protected/", BasicAuth(Protected, user, hashedPassword))
 
-	log.Fatal(fasthttp.ListenAndServe(":8080", r.Handler))
+	s := http.Server{Addr: ":8080", Handler: r}
+	log.Fatal(http.ListenAndServe(":8080", r))
+
+	// curl -vs --user gordon:secret! http://127.0.0.1:8080/protected/
 }
 ```

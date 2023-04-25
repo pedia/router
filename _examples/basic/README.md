@@ -14,32 +14,37 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/pedia/router"
-	"github.com/valyala/fasthttp"
 )
 
 // Index is the index handler
-func Index(ctx *fasthttp.RequestCtx) {
-	fmt.Fprint(ctx, "Welcome!\n")
+func Index(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Welcome!\n")
 }
 
 // Hello is the Hello handler
-func Hello(ctx *fasthttp.RequestCtx) {
-	fmt.Fprintf(ctx, "hello, %s!\n", ctx.UserValue("name"))
+func Hello(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "hello, %s!\n", router.UserValue(r, "name"))
 }
 
 // MultiParams is the multi params handler
-func MultiParams(ctx *fasthttp.RequestCtx) {
-	fmt.Fprintf(ctx, "hi, %s, %s!\n", ctx.UserValue("name"), ctx.UserValue("word"))
+func MultiParams(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "hi, %s, %s!\n", router.UserValue(r, "name"), router.UserValue(r, "word"))
+}
+
+// RegexParams is the params handler with regex validation
+func RegexParams(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "hi, %s\n", router.UserValue(r, "name"))
 }
 
 // QueryArgs is used for uri query args test #11:
 // if the req uri is /ping?name=foo, output: Pong! foo
 // if the req uri is /piNg?name=foo, redirect to /ping, output: Pong!
-func QueryArgs(ctx *fasthttp.RequestCtx) {
-	name := ctx.QueryArgs().Peek("name")
-	fmt.Fprintf(ctx, "Pong! %s\n", string(name))
+func QueryArgs(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	fmt.Fprintf(w, "Pong! %s\n", name)
 }
 
 func main() {
@@ -47,8 +52,10 @@ func main() {
 	r.GET("/", Index)
 	r.GET("/hello/{name}", Hello)
 	r.GET("/multi/{name}/{word}", MultiParams)
+	r.GET("/regex/{name:[a-zA-Z]+}/test", RegexParams)
+	r.GET("/optional/{name?:[a-zA-Z]+}/{word?}", MultiParams)
 	r.GET("/ping", QueryArgs)
 
-	log.Fatal(fasthttp.ListenAndServe(":8080", r.Handler))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
 ```
