@@ -47,8 +47,7 @@ func main() {
 	hs["example.com:12345"] = r.ServeHTTP
 
 	// Use the HostSwitch to listen and serve on port 12345
-	s := http.Server{Addr: ":12345", Handler: hs}
-	log.Fatal(s.ListenAndServe())
+	log.Fatal(http.ListenAndServe(":12345", hs))
 
 	// curl -vs -H "Host: example.com:12345" http://127.0.0.1:12345/
 	// curl -vs  http://127.0.0.1:12345/

@@ -105,7 +105,7 @@ func main() {
 	r.GET("/protected/", BasicAuth(Protected, user, hashedPassword))
 
 	s := http.Server{Addr: ":8080", Handler: r}
-	log.Fatal(s.ListenAndServe())
+	log.Fatal(http.ListenAndServe(":8080", r))
 
 	// curl -vs --user gordon:secret! http://127.0.0.1:8080/protected/
 }

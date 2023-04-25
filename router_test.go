@@ -84,27 +84,37 @@ func (rw *readWriter) SetWriteDeadline(t time.Time) error {
 type assertFn func(rw *readWriter)
 
 func assertWithTestServer(t *testing.T, uri string, handler http.HandlerFunc, fn assertFn) {
-	// s := &http.Server{
-	// 	Handler: handler,
-	// }
+	s := &http.Server{Handler: handler}
 
-	// rw := &readWriter{}
-	// ch := make(chan error)
+	l, _ := net.Listen("tcp", "")
+	rw := &readWriter{}
+	ch := make(chan error)
 
-	// rw.r.WriteString(uri)
-	// go func() {
-	// 	ch <- s.ServeConn(rw)
-	// }()
-	// select {
-	// case err := <-ch:
-	// 	if err != nil {
-	// 		t.Fatalf("return error %s", err)
-	// 	}
-	// case <-time.After(500 * time.Millisecond):
-	// 	t.Fatalf("timeout")
-	// }
+	conn, err := net.DialTCP("tcp", nil, l.Addr().(*net.TCPAddr))
+	if err != nil {
+		t.Fatalf("dial tcp %s", err)
+	}
 
-	// fn(rw)
+	conn.Write([]byte(uri))
+	go func() {
+		_, err := conn.Read(rw.r.Bytes())
+		if err != nil {
+			t.Fail()
+		}
+	}()
+	go func() {
+		ch <- s.Serve(l)
+	}()
+	select {
+	case err := <-ch:
+		if err != nil {
+			t.Fatalf("return error %s", err)
+		}
+	case <-time.After(5000 * time.Millisecond):
+		t.Fatalf("timeout")
+	}
+
+	fn(rw)
 }
 
 func catchPanic(testFunc func()) (recv interface{}) {

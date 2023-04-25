@@ -45,6 +45,5 @@ func main() {
 	r.GET("/optional/{name?:[a-zA-Z]+}/{word?}", MultiParams)
 	r.GET("/ping", QueryArgs)
 
-	s := http.Server{Addr: ":8080", Handler: r}
-	log.Fatal(s.ListenAndServe())
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
