@@ -1,7 +1,7 @@
 # Router
 
-[![Test status](https://github.com/pedia/router/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/pedia/router/actions?workflow=test)
-[![Coverage Status](https://coveralls.io/repos/pedia/router/badge.svg?branch=master&service=github)](https://coveralls.io/github/pedia/router?branch=master)
+[![Test status](https://github.com/pedia/router/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/pedia/router/actions?workflow=test)
+[![Coverage Status](https://coveralls.io/repos/pedia/router/badge.svg?branch=main&service=github)](https://coveralls.io/github/pedia/router?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pedia/router)](https://goreportcard.com/report/github.com/pedia/router)
 [![GoDev](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/pedia/router)
 [![GitHub release](https://img.shields.io/github/release/pedia/router.svg)](https://github.com/pedia/router/releases)
