@@ -6,26 +6,29 @@ A trivial example is:
 	package main
 
 	import (
-	    "fmt"
-	    "log"
+		"fmt"
+		"log"
+		"net/http"
 
-	    "github.com/pedia/router"
+		"github.com/pedia/router"
 	)
 
-	func Index(ctx *fasthttp.RequestCtx) {
-	    fmt.Fprint(w, "Welcome!\n")
+	// Index is the index handler
+	func Index(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "Welcome!\n")
 	}
 
-	func Hello(ctx *fasthttp.RequestCtx) {
-	    fmt.Fprintf(w, "hello, %s!\n", ctx.UserValue("name"))
+	// Hello is the Hello handler
+	func Hello(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "hello, %s!\n", router.UserValue(r, "name"))
 	}
 
 	func main() {
-	    r := router.New()
-	    r.GET("/", Index)
-	    r.GET("/hello/{name}", Hello)
+		r := router.New()
+		r.GET("/", Index)
+		r.GET("/hello/{name}", Hello)
 
-	    log.Fatal(fasthttp.ListenAndServe(":8080", r.Handler))
+		log.Fatal(http.ListenAndServe(":8080", r))
 	}
 
 The router matches incoming requests by the request method and the path.
@@ -64,11 +67,11 @@ until the end, catch-all parameters must always be the final path element.
 	 /files/templates/article.html       match: filepath="/templates/article.html"
 	 /files                              no match, but the router would redirect
 
-The value of parameters is saved in ctx.UserValue(<key>), consisting
+The value of parameters is saved in router.UserValue(r, <key>), consisting
 each of a key and a value. The slice is passed to the Handle func as a third
 parameter.
 To retrieve the value of a parameter,gets by the name of the parameter
 
-	user := ctx.UserValue("user") // defined by {user} or {user:*}
+	user := router.UserValue(r, "user") // defined by {user} or {user:*}
 */
 package router
