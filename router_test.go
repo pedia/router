@@ -134,11 +134,7 @@ func TestRouter(t *testing.T) {
 		routed = true
 		want := "gopher"
 
-		param, ok := UserValue(r, "name").(string)
-
-		if !ok {
-			t.Fatalf("wrong wildcard values: param value is nil")
-		}
+		param := UserValue(r, "name")
 
 		if param != want {
 			t.Fatalf("wrong wildcard values: want %s, got %s", want, param)
@@ -1013,18 +1009,18 @@ func TestRouterSamePrefixParamRoute(t *testing.T) {
 	router := New()
 	v1 := router.Group("/v1")
 	v1.GET("/foo/{id}/{pageSize}/{page}", func(w http.ResponseWriter, r *http.Request) {
-		id1 = UserValue(r, "id").(string)
-		pageSize = UserValue(r, "pageSize").(string)
-		page = UserValue(r, "page").(string)
+		id1 = UserValue(r, "id")
+		pageSize = UserValue(r, "pageSize")
+		page = UserValue(r, "page")
 		routed1 = true
 	})
 	v1.GET("/foo/{id}/{iid}", func(w http.ResponseWriter, r *http.Request) {
-		id2 = UserValue(r, "id").(string)
-		iid = UserValue(r, "iid").(string)
+		id2 = UserValue(r, "id")
+		iid = UserValue(r, "iid")
 		routed2 = true
 	})
 	v1.GET("/foo/{id}", func(w http.ResponseWriter, r *http.Request) {
-		id3 = UserValue(r, "id").(string)
+		id3 = UserValue(r, "id")
 		routed3 = true
 	})
 

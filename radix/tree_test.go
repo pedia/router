@@ -19,7 +19,7 @@ func generateHandler() http.HandlerFunc {
 		// w.Write(hex)
 		m := UserValues(r)
 		if m != nil {
-			m["hex"] = hex
+			m["hex"] = string(hex)
 			b, _ := json.Marshal(m)
 			w.Write(b)
 		}

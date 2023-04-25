@@ -15,7 +15,7 @@ type testRequests []struct {
 	path       string
 	nilHandler bool
 	route      string
-	ps         map[string]interface{}
+	ps         map[string]string
 }
 
 type testRoute struct {
@@ -25,13 +25,13 @@ type testRoute struct {
 
 // Used as a workaround since we can't compare functions or their addresses
 var fakeHandlerValue string
-var fakeHandlerParams map[string]interface{}
+var fakeHandlerParams map[string]string
 
 func fakeHandler(val string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fakeHandlerValue = val
-		fakeHandlerParams = map[string]interface{}{}
-		VisitUserValues(r, func(key string, value interface{}) {
+		fakeHandlerParams = map[string]string{}
+		VisitUserValues(r, func(key string, value string) {
 			fakeHandlerParams[key] = value
 		})
 	}
@@ -65,13 +65,13 @@ func checkRequests(t *testing.T, tree *Tree, requests testRequests) {
 		}
 
 		if request.ps == nil {
-			request.ps = make(map[string]interface{})
+			request.ps = make(map[string]string)
 		}
 
 		if !reflect.DeepEqual(fakeHandlerParams, request.ps) {
 			t.Errorf("Route %s - User values == %v, want %v", request.path, fakeHandlerParams, request.ps)
 		}
-		fakeHandlerParams = make(map[string]interface{})
+		fakeHandlerParams = make(map[string]string)
 	}
 }
 
@@ -133,11 +133,11 @@ func TestTreeAddAndGet(t *testing.T) {
 		{"/β", false, "/β", nil},
 		{"/hello/test", false, "/hello/test", nil},
 		{"/hello/tooth", false, "/hello/tooth", nil},
-		{"/hello/testastretta", false, "/hello/{name}", map[string]interface{}{"name": "testastretta"}},
-		{"/hello/tes", false, "/hello/{name}", map[string]interface{}{"name": "tes"}},
+		{"/hello/testastretta", false, "/hello/{name}", map[string]string{"name": "testastretta"}},
+		{"/hello/tes", false, "/hello/{name}", map[string]string{"name": "tes"}},
 		{"/hello/test/bye", true, "", nil},
-		{"/regex/more_alt/hello", false, "/regex/{path:*}", map[string]interface{}{"path": "more_alt/hello"}},
-		{"/regex/small_alt/hello", false, "/regex/{c1:big_alt|alt|small_alt}/{rest:*}", map[string]interface{}{"c1": "small_alt", "rest": "hello"}},
+		{"/regex/more_alt/hello", false, "/regex/{path:*}", map[string]string{"path": "more_alt/hello"}},
+		{"/regex/small_alt/hello", false, "/regex/{c1:big_alt|alt|small_alt}/{rest:*}", map[string]string{"c1": "small_alt", "rest": "hello"}},
 	})
 }
 
@@ -168,19 +168,19 @@ func TestTreeWildcard(t *testing.T) {
 
 	checkRequests(t, tree, testRequests{
 		{"/", false, "/", nil},
-		{"/cmd/test/", false, "/cmd/{tool}/", map[string]interface{}{"tool": "test"}},
+		{"/cmd/test/", false, "/cmd/{tool}/", map[string]string{"tool": "test"}},
 		{"/cmd/test", true, "", nil},
-		{"/cmd/test/3", false, "/cmd/{tool}/{sub}", map[string]interface{}{"tool": "test", "sub": "3"}},
-		{"/src/", false, "/src/{filepath:*}", map[string]interface{}{"filepath": ""}},
-		{"/src/some/file.png", false, "/src/{filepath:*}", map[string]interface{}{"filepath": "some/file.png"}},
+		{"/cmd/test/3", false, "/cmd/{tool}/{sub}", map[string]string{"tool": "test", "sub": "3"}},
+		{"/src/", false, "/src/{filepath:*}", map[string]string{"filepath": ""}},
+		{"/src/some/file.png", false, "/src/{filepath:*}", map[string]string{"filepath": "some/file.png"}},
 		{"/search/", false, "/search/", nil},
-		{"/search/someth!ng+in+ünìcodé", false, "/search/{query}", map[string]interface{}{"query": "someth!ng+in+ünìcodé"}},
+		{"/search/someth!ng+in+ünìcodé", false, "/search/{query}", map[string]string{"query": "someth!ng+in+ünìcodé"}},
 		{"/search/someth!ng+in+ünìcodé/", true, "", nil},
-		{"/user_gopher", false, "/user_{name}", map[string]interface{}{"name": "gopher"}},
-		{"/user_gopher/about", false, "/user_{name}/about", map[string]interface{}{"name": "gopher"}},
-		{"/files/js/inc/framework.js", false, "/files/{dir}/{filepath:*}", map[string]interface{}{"dir": "js", "filepath": "inc/framework.js"}},
-		{"/info/gordon/public", false, "/info/{user}/public", map[string]interface{}{"user": "gordon"}},
-		{"/info/gordon/project/go", false, "/info/{user}/project/{project}", map[string]interface{}{"user": "gordon", "project": "go"}},
+		{"/user_gopher", false, "/user_{name}", map[string]string{"name": "gopher"}},
+		{"/user_gopher/about", false, "/user_{name}/about", map[string]string{"name": "gopher"}},
+		{"/files/js/inc/framework.js", false, "/files/{dir}/{filepath:*}", map[string]string{"dir": "js", "filepath": "inc/framework.js"}},
+		{"/info/gordon/public", false, "/info/{user}/public", map[string]string{"user": "gordon"}},
+		{"/info/gordon/project/go", false, "/info/{user}/project/{project}", map[string]string{"user": "gordon", "project": "go"}},
 		{"/info/gordon", true, "", nil},
 	})
 }
@@ -262,9 +262,9 @@ func TestTreeDuplicatePath(t *testing.T) {
 	checkRequests(t, tree, testRequests{
 		{"/", false, "/", nil},
 		{"/doc/", false, "/doc/", nil},
-		{"/src/some/file.png", false, "/src/{filepath:*}", map[string]interface{}{"filepath": "some/file.png"}},
-		{"/search/someth!ng+in+ünìcodé", false, "/search/{query}", map[string]interface{}{"query": "someth!ng+in+ünìcodé"}},
-		{"/user_gopher", false, "/user_{name}", map[string]interface{}{"name": "gopher"}},
+		{"/src/some/file.png", false, "/src/{filepath:*}", map[string]string{"filepath": "some/file.png"}},
+		{"/search/someth!ng+in+ünìcodé", false, "/search/{query}", map[string]string{"query": "someth!ng+in+ünìcodé"}},
+		{"/user_gopher", false, "/user_{name}", map[string]string{"name": "gopher"}},
 	})
 }
 

@@ -14,9 +14,13 @@ func validatePath(path string) {
 	}
 }
 
-func UserValue(r *http.Request, key string) interface{} {
+func UserValue(r *http.Request, key string) string {
 	if m := radix.UserValues(r); m != nil {
 		return m[key]
 	}
-	return nil
+	return ""
+}
+
+func UserValues(r *http.Request) map[string]string {
+	return radix.UserValues(r)
 }
