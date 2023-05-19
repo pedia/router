@@ -43,7 +43,7 @@ func RegexParams(w http.ResponseWriter, r *http.Request) {
 // if the req uri is /ping?name=foo, output: Pong! foo
 // if the req uri is /piNg?name=foo, redirect to /ping, output: Pong!
 func QueryArgs(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
+	name := r.FormValue("name")
 	fmt.Fprintf(w, "Pong! %s\n", name)
 }
 
