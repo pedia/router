@@ -3,10 +3,12 @@ package router
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
@@ -914,69 +916,31 @@ func TestRouterMatchedRoutePath(t *testing.T) {
 	}
 }
 
-// func TestRouterServeFiles(t *testing.T) {
-// 	r := New()
+func TestRouterServeFiles(t *testing.T) {
+	router := New()
 
-// 	recv := catchPanic(func() {
-// 		r.ServeFiles("/noFilepath", os.TempDir())
-// 	})
-// 	if recv == nil {
-// 		t.Fatal("registering path not ending with '{filepath:*}' did not panic")
-// 	}
-// 	body := []byte("fake ico")
-// 	ioutil.WriteFile(os.TempDir()+"/favicon.ico", body, 0644)
+	body := []byte("fake ico")
+	ioutil.WriteFile(os.TempDir()+"/favicon.ico", body, 0644)
 
-// 	r.ServeFiles("/{filepath:*}", os.TempDir())
+	router.ServeFiles("/{filepath:*}", os.TempDir())
 
-// 	assertWithTestServer(t, "GET /favicon.ico HTTP/1.1\r\n\r\n", r.Handler, func(rw *readWriter) {
-// 		br := bufio.NewReader(&rw.w)
-// 		var resp fasthttp.Response
-// 		if err := resp.Read(br); err != nil {
-// 			t.Fatalf("Unexpected error when reading response: %s", err)
-// 		}
-// 		if resp.Header.StatusCode() != 200 {
-// 			t.Fatalf("Unexpected status code %d. Expected %d", resp.Header.StatusCode(), 200)
-// 		}
-// 		if !bytes.Equal(resp.Body(), body) {
-// 			t.Fatalf("Unexpected body %q. Expected %q", resp.Body(), string(body))
-// 		}
-// 	})
-// }
+	r := httptest.NewRequest("GET", "/favicon.ico", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	if w.Code != 200 {
+		t.Fatalf("Unexpected status code %d. Expected %d", w.Code, 200)
+	}
+	if !bytes.Equal(w.Body.Bytes(), body) {
+		t.Fatalf("Unexpected body %q. Expected %q", w.Body.Bytes(), string(body))
+	}
 
-// func TestRouterServeFilesCustom(t *testing.T) {
-// 	r := New()
-
-// 	root := os.TempDir()
-
-// 	fs := &fasthttp.FS{
-// 		Root: root,
-// 	}
-
-// 	recv := catchPanic(func() {
-// 		r.ServeFilesCustom("/noFilepath", fs)
-// 	})
-// 	if recv == nil {
-// 		t.Fatal("registering path not ending with '{filepath:*}' did not panic")
-// 	}
-// 	body := []byte("fake ico")
-// 	ioutil.WriteFile(root+"/favicon.ico", body, 0644)
-
-// 	r.ServeFilesCustom("/{filepath:*}", fs)
-
-// 	assertWithTestServer(t, "GET /favicon.ico HTTP/1.1\r\n\r\n", r.Handler, func(rw *readWriter) {
-// 		br := bufio.NewReader(&rw.w)
-// 		var resp fasthttp.Response
-// 		if err := resp.Read(br); err != nil {
-// 			t.Fatalf("Unexpected error when reading response: %s", err)
-// 		}
-// 		if resp.Header.StatusCode() != 200 {
-// 			t.Fatalf("Unexpected status code %d. Expected %d", resp.Header.StatusCode(), 200)
-// 		}
-// 		if !bytes.Equal(resp.Body(), body) {
-// 			t.Fatalf("Unexpected body %q. Expected %q", resp.Body(), string(body))
-// 		}
-// 	})
-// }
+	r = httptest.NewRequest("GET", "/notfound", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	if w.Code != 404 {
+		t.Fatalf("Unexpected status code %d. Expected %d", w.Code, 404)
+	}
+}
 
 func TestRouterList(t *testing.T) {
 	expected := map[string][]string{
