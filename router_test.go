@@ -3,7 +3,6 @@ package router
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -251,6 +250,20 @@ func TestRouterAPI(t *testing.T) {
 
 	for _, method := range httpMethods {
 		request(method, "/ANY")
+		if !any {
+			t.Errorf("routing ANY failed - Method: %s", method)
+		}
+
+		any = false
+	}
+
+	g := router.Group("/c")
+	g.ANY("/ANY", func(w http.ResponseWriter, r *http.Request) {
+		any = true
+	})
+
+	for _, method := range httpMethods {
+		request(method, "/c/ANY")
 		if !any {
 			t.Errorf("routing ANY failed - Method: %s", method)
 		}
@@ -920,9 +933,35 @@ func TestRouterServeFiles(t *testing.T) {
 	router := New()
 
 	body := []byte("fake ico")
-	ioutil.WriteFile(os.TempDir()+"/favicon.ico", body, 0644)
+	os.WriteFile(os.TempDir()+"/favicon.ico", body, 0644)
 
 	router.ServeFiles("/{filepath:*}", os.TempDir())
+
+	r := httptest.NewRequest("GET", "/favicon.ico", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	if w.Code != 200 {
+		t.Fatalf("Unexpected status code %d. Expected %d", w.Code, 200)
+	}
+	if !bytes.Equal(w.Body.Bytes(), body) {
+		t.Fatalf("Unexpected body %q. Expected %q", w.Body.Bytes(), string(body))
+	}
+
+	r = httptest.NewRequest("GET", "/notfound", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	if w.Code != 404 {
+		t.Fatalf("Unexpected status code %d. Expected %d", w.Code, 404)
+	}
+}
+
+func TestRouterServeFile(t *testing.T) {
+	router := New()
+
+	body := []byte("fake ico")
+	os.WriteFile(os.TempDir()+"/favicon.ico", body, 0644)
+
+	router.ServeFile("/favicon.ico", os.TempDir())
 
 	r := httptest.NewRequest("GET", "/favicon.ico", nil)
 	w := httptest.NewRecorder()
@@ -963,7 +1002,6 @@ func TestRouterList(t *testing.T) {
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Router.List() == %v, want %v", result, expected)
 	}
-
 }
 
 func TestRouterSamePrefixParamRoute(t *testing.T) {

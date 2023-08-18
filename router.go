@@ -175,12 +175,6 @@ func (router *Router) ANY(path string, handler http.HandlerFunc) {
 //	router.ServeFiles("/src/{filepath:*}", "./")
 func (router *Router) ServeFiles(path string, rootPath string) {
 	router.ServeFilesCustom(path, http.Dir(rootPath))
-	// {
-	// 	Root:               rootPath,
-	// 	IndexNames:         []string{"index.html"},
-	// 	GenerateIndexPages: true,
-	// 	AcceptByteRange:    true,
-	// })
 }
 
 // ServeFilesCustom serves files from the given file system settings.
@@ -199,16 +193,14 @@ func (router *Router) ServeFilesCustom(path string, fs http.FileSystem) {
 	if !strings.HasSuffix(path, suffix) {
 		panic("path must end with " + suffix + " in path '" + path + "'")
 	}
-
-	// TODO:
-	// prefix := path[:len(path)-len(suffix)]
-	// stripSlashes := strings.Count(prefix, "/")
-
-	// if fs.PathRewrite == nil && stripSlashes > 0 {
-	// 	fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
-	// }
 	fileServer := http.FileServer(fs)
 
+	router.GET(path, fileServer.ServeHTTP)
+}
+
+// Serve single file
+func (router *Router) ServeFile(path, rootPath string) {
+	fileServer := http.FileServer(http.Dir(rootPath))
 	router.GET(path, fileServer.ServeHTTP)
 }
 
